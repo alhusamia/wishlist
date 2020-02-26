@@ -2,11 +2,21 @@ from django.shortcuts import render, redirect
 from items.models import Item
 from .forms import UserRegisterForm, UserLoginForm
 from django.contrib.auth import login, logout, authenticate
+from django.db.models import Q
 
 # Create your views here.
 def item_list(request):
+    items = Item.objects.all()
+
+    query = request.GET.get("q")
+    if query:
+        items = items.filter(
+            Q(name__icontains=query)|
+            Q(description__icontains=query)
+            ).distinct()
+
     context = {
-        "items": Item.objects.all()
+        "items": items
     }
     return render(request, 'item_list.html', context)
 
@@ -15,6 +25,8 @@ def item_detail(request, item_id):
         "item": Item.objects.get(id=item_id)
     }
     return render(request, 'item_detail.html', context)
+
+
 
 def user_register(request):
     register_form = UserRegisterForm()
@@ -30,6 +42,8 @@ def user_register(request):
         "register_form": register_form
     }
     return render(request, 'user_register.html', context)
+
+
 
 def user_login(request):
     login_form = UserLoginForm()
@@ -47,7 +61,17 @@ def user_login(request):
     }
     return render(request, 'user_login.html', context)
 
+
+
 def user_logout(request):
     logout(request)
 
     return redirect('item-list')
+
+def favorite(request,item_id):
+    item = Item.objects.get(id=item_id)
+    if request.user.is_anonymous:
+        return redirect('user-login')
+    else:
+        favorite = FavoriteItem(item=item,user=request.user)
+        favorite.save()    
